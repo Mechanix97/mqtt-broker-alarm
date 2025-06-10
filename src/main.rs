@@ -1,6 +1,8 @@
+mod alarm;
 mod constants;
 mod telegram;
 
+use alarm::*;
 use constants::*;
 use telegram::*;
 
@@ -8,7 +10,6 @@ use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS};
 use std::error::Error;
 use tokio::time::Duration;
 use tracing::info;
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -21,9 +22,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
 
-    if let Err(e) = client.subscribe(TOPIC_BELL, QoS::AtMostOnce).await {
-        eprintln!("Error al suscribirse: {:?}", e);
-    }
+    // subscrive to topics
+    client
+        .subscribe(TOPIC_ALARM_STATUS, QoS::AtMostOnce)
+        .await?;
+    client.subscribe(TOPIC_BELL, QoS::AtMostOnce).await?;
+
+    client.subscribe(TOPIC_FRONT_DOOR, QoS::AtMostOnce).await?;
+    client.subscribe(TOPIC_BACK_DOOR, QoS::AtMostOnce).await?;
+
+    client
+        .subscribe(TOPIC_MOVEMENT_SENSOR_1, QoS::AtMostOnce)
+        .await?;
+    client
+        .subscribe(TOPIC_MOVEMENT_SENSOR_2, QoS::AtMostOnce)
+        .await?;
+    client
+        .subscribe(TOPIC_MOVEMENT_SENSOR_3, QoS::AtMostOnce)
+        .await?;
+
+    let mut alarm = Alarm::new(&client);
+
     loop {
         while let Ok(event) = eventloop.poll().await {
             match event {
@@ -32,16 +51,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         info!("topic/bell event");
                         send_telegram_message("TIMBREEEEE").await?;
                     }
-                    TOPIC_FRONT_DOOR => {}
-                    TOPIC_BACK_DOOR => {}
-                    TOPIC_MOVEMENT_SENSOR_1 => {}
-                    TOPIC_MOVEMENT_SENSOR_2 => {}
-                    TOPIC_MOVEMENT_SENSOR_3 => {}
+                    TOPIC_ALARM_STATUS => match parse_on_off(&p.payload) {
+                        true => alarm.arm().await?,
+                        false => {
+                            alarm.disarm().await?;
+                            alarm.desactivate().await?
+                        }
+                    },
+                    TOPIC_FRONT_DOOR if alarm.is_armed() => {
+                        info!("front door {:?}", p.payload);
+                    }
+                    TOPIC_BACK_DOOR if alarm.is_armed() => {}
+                    TOPIC_MOVEMENT_SENSOR_1 if alarm.is_armed() => {
+                        info!("movement sensor 1 {:?}", p.payload);
+                        alarm.activate().await?;
+                    }
+                    TOPIC_MOVEMENT_SENSOR_2 if alarm.is_armed() => {}
+                    TOPIC_MOVEMENT_SENSOR_3 if alarm.is_armed() => {}
                     _ => {}
                 },
                 Event::Outgoing(_) => {}
                 _ => {}
             }
         }
+    }
+}
+
+fn parse_on_off(input: &[u8]) -> bool {
+    match input {
+        b"ON" => true,
+        b"OFF" => false,
+        _ => false,
     }
 }
