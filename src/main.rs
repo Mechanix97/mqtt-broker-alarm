@@ -27,16 +27,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
     loop {
         while let Ok(event) = eventloop.poll().await {
             match event {
-                Event::Incoming(Packet::Publish(p)) => {
-                    if p.topic == TOPIC_BELL {
+                Event::Incoming(Packet::Publish(p)) => match p.topic.as_str() {
+                    TOPIC_BELL => {
                         info!("topic/bell event");
                         send_telegram_message("TIMBREEEEE").await?;
                     }
-                }
+                    TOPIC_FRONT_DOOR => {}
+                    TOPIC_BACK_DOOR => {}
+                    TOPIC_MOVEMENT_SENSOR_1 => {}
+                    TOPIC_MOVEMENT_SENSOR_2 => {}
+                    TOPIC_MOVEMENT_SENSOR_3 => {}
+                    _ => {}
+                },
                 Event::Outgoing(_) => {}
-                _ => {
-                    break;
-                }
+                _ => {}
             }
         }
     }
