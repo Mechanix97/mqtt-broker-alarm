@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_max_level(tracing::Level::INFO)
         .init();
 
-    let mut mqttoptions = MqttOptions::new("rust-mqtt-reader", "192.168.100.2", 1883);
+    let mut mqttoptions = MqttOptions::new("rust-mqtt-reader", MQTT_SERVER_IP, MQTT_SERVER_PORT);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 Event::Incoming(Packet::Publish(p)) => match p.topic.as_str() {
                     TOPIC_BELL => {
                         info!("topic/bell event");
-                        send_telegram_message("TIMBREEEEE").await?;
+                        send_telegram_message(TELEGRAM_MSG_BELL_ALERT).await?;
                     }
                     TOPIC_ALARM_STATUS => match parse_on_off(&p.payload) {
                         true => alarm.arm().await?,
@@ -59,17 +59,45 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         }
                     },
                     TOPIC_FRONT_DOOR if alarm.is_armed() => {
-                        info!("front door {:?}", p.payload);
-                    }
-                    TOPIC_BACK_DOOR if alarm.is_armed() => {}
-                    TOPIC_MOVEMENT_SENSOR_1 if alarm.is_armed() => {
-                        info!("movement sensor 1 {:?}", p.payload);
+                        info!("Front door {:?}", p.payload);
                         if parse_on_off(&p.payload) {
+                            send_telegram_message(TELEGRAM_MSG_INTRUDER_ALERT).await?;
+                            send_telegram_message(TELEGRAM_MSG_FRONT_DOOR_ALERT).await?;
                             alarm.activate().await?;
                         }
                     }
-                    TOPIC_MOVEMENT_SENSOR_2 if alarm.is_armed() => {}
-                    TOPIC_MOVEMENT_SENSOR_3 if alarm.is_armed() => {}
+                    TOPIC_BACK_DOOR if alarm.is_armed() => {
+                        info!("Back door {:?}", p.payload);
+                        if parse_on_off(&p.payload) {
+                            send_telegram_message(TELEGRAM_MSG_INTRUDER_ALERT).await?;
+                            send_telegram_message(TELEGRAM_MSG_BACK_DOOR_ALERT).await?;
+                            alarm.activate().await?;
+                        }
+                    }
+                    TOPIC_MOVEMENT_SENSOR_1 if alarm.is_armed() => {
+                        info!("Momvement sector 1 {:?}", p.payload);
+                        if parse_on_off(&p.payload) {
+                            send_telegram_message(TELEGRAM_MSG_INTRUDER_ALERT).await?;
+                            send_telegram_message(TELEGRAM_MSG_MOVEMENT_1_ALERT).await?;
+                            alarm.activate().await?;
+                        }
+                    }
+                    TOPIC_MOVEMENT_SENSOR_2 if alarm.is_armed() => {
+                        info!("Momvement sector 2 {:?}", p.payload);
+                        if parse_on_off(&p.payload) {
+                            send_telegram_message(TELEGRAM_MSG_INTRUDER_ALERT).await?;
+                            send_telegram_message(TELEGRAM_MSG_MOVEMENT_2_ALERT).await?;
+                            alarm.activate().await?;
+                        }
+                    }
+                    TOPIC_MOVEMENT_SENSOR_3 if alarm.is_armed() => {
+                        info!("Momvement sector 3 {:?}", p.payload);
+                        if parse_on_off(&p.payload) {
+                            send_telegram_message(TELEGRAM_MSG_INTRUDER_ALERT).await?;
+                            send_telegram_message(TELEGRAM_MSG_MOVEMENT_3_ALERT).await?;
+                            alarm.activate().await?;
+                        }
+                    }
                     _ => {}
                 },
                 Event::Outgoing(_) => {}
