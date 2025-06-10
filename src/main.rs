@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
 
-    // subscrive to topics
+    // subscribe to topics
     client
         .subscribe(TOPIC_ALARM_STATUS, QoS::AtMostOnce)
         .await?;
@@ -64,7 +64,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     TOPIC_BACK_DOOR if alarm.is_armed() => {}
                     TOPIC_MOVEMENT_SENSOR_1 if alarm.is_armed() => {
                         info!("movement sensor 1 {:?}", p.payload);
-                        alarm.activate().await?;
+                        if parse_on_off(&p.payload) {
+                            alarm.activate().await?;
+                        }
                     }
                     TOPIC_MOVEMENT_SENSOR_2 if alarm.is_armed() => {}
                     TOPIC_MOVEMENT_SENSOR_3 if alarm.is_armed() => {}
