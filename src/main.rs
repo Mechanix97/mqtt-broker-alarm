@@ -1,6 +1,9 @@
 mod constants;
+mod telegram;
 
 use constants::*;
+use telegram::*;
+
 use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS};
 use std::error::Error;
 use tokio::time::Duration;
@@ -26,7 +29,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             match event {
                 Event::Incoming(Packet::Publish(p)) => {
                     if p.topic == TOPIC_BELL {
-                        info!("bell");
+                        info!("topic/bell event");
+                        send_telegram_message("TIMBREEEEE").await?;
                     }
                 }
                 Event::Outgoing(_) => {}
