@@ -22,3 +22,5 @@ pub const TELEGRAM_MSG_BACK_DOOR_ALERT: &str = "Puerta trasera abierta 🚪";
 pub const TELEGRAM_MSG_MOVEMENT_1_ALERT: &str = "Movimiento detectado 🏃🏾‍♂️ Sector 1";
 pub const TELEGRAM_MSG_MOVEMENT_3_ALERT: &str = "Movimiento detectado 🏃🏾‍♂️ Sector 2";
 pub const TELEGRAM_MSG_MOVEMENT_2_ALERT: &str = "Movimiento detectado 🏃🏾‍♂️ Sector 3";
+
+pub const ALARM_ACTIVE_DURATION: u64 = 60;

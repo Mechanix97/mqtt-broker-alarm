@@ -54,8 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     TOPIC_ALARM_STATUS => match parse_on_off(&p.payload) {
                         true => alarm.arm().await?,
                         false => {
-                            alarm.disarm().await?;
-                            alarm.desactivate().await?
+                            alarm.desactivate().await?;
                         }
                     },
                     TOPIC_FRONT_DOOR if alarm.is_armed() => {

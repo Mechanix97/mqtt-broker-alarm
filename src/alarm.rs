@@ -2,9 +2,12 @@ use tokio::time::{Duration, sleep};
 
 use rumqttc::AsyncClient;
 use std::error::Error;
+use tokio::task;
 use tracing::info;
 
-use crate::constants::{TOPIC_ALARM_EXTERIOR, TOPIC_ALARM_INTERIOR};
+use crate::constants::{
+    ALARM_ACTIVE_DURATION, TOPIC_ALARM_EXTERIOR, TOPIC_ALARM_INTERIOR, TOPIC_ALARM_STATUS,
+};
 
 pub struct Alarm<'a> {
     armed: bool,
@@ -21,18 +24,9 @@ impl<'a> Alarm<'a> {
 
     pub async fn arm(&mut self) -> Result<(), Box<dyn Error>> {
         if !self.is_armed() {
-            self.client
-                .publish(TOPIC_ALARM_INTERIOR, rumqttc::QoS::AtLeastOnce, false, "ON")
-                .await?;
+            self.publish(TOPIC_ALARM_INTERIOR, "ON").await?;
             sleep(Duration::from_millis(100)).await;
-            self.client
-                .publish(
-                    TOPIC_ALARM_INTERIOR,
-                    rumqttc::QoS::AtLeastOnce,
-                    false,
-                    "OFF",
-                )
-                .await?;
+            self.publish(TOPIC_ALARM_INTERIOR, "OFF").await?;
         }
         info!("alarm armed");
         self.armed = true;
@@ -41,18 +35,9 @@ impl<'a> Alarm<'a> {
 
     pub async fn disarm(&mut self) -> Result<(), Box<dyn Error>> {
         if self.is_armed() {
-            self.client
-                .publish(TOPIC_ALARM_INTERIOR, rumqttc::QoS::AtLeastOnce, false, "ON")
-                .await?;
+            self.publish(TOPIC_ALARM_INTERIOR, "ON").await?;
             sleep(Duration::from_millis(100)).await;
-            self.client
-                .publish(
-                    TOPIC_ALARM_INTERIOR,
-                    rumqttc::QoS::AtLeastOnce,
-                    false,
-                    "OFF",
-                )
-                .await?;
+            self.publish(TOPIC_ALARM_INTERIOR, "OFF").await?;
         }
         info!("alarm disarmed");
         self.armed = false;
@@ -65,30 +50,60 @@ impl<'a> Alarm<'a> {
 
     pub async fn activate(&mut self) -> Result<(), Box<dyn Error>> {
         if self.is_armed() {
-            self.client
-                .publish(
-                    TOPIC_ALARM_EXTERIOR,
-                    rumqttc::QoS::AtLeastOnce,
-                    false,
-                    "OFF",
-                )
-                .await?;
+            info!("Alarm activated");
+            self.armed = false;
+            self.publish(TOPIC_ALARM_EXTERIOR, "ON").await?;
+            // self.publish(TOPIC_ALARM_INTERIOR, "ON").await?;
+
+            // Spawn a task to deactivate the alarm after 1 minute
+            let client = self.client.clone();
+            task::spawn(async move {
+                sleep(Duration::from_secs(ALARM_ACTIVE_DURATION)).await;
+                info!("Alarm automatically deactivated after 1 minute");
+                if let Err(e) = client
+                    .publish(
+                        TOPIC_ALARM_EXTERIOR,
+                        rumqttc::QoS::AtLeastOnce,
+                        false,
+                        "OFF",
+                    )
+                    .await
+                {
+                    tracing::error!("Failed to deactivate alarm: {}", e);
+                }
+                if let Err(e) = client
+                    .publish(
+                        TOPIC_ALARM_INTERIOR,
+                        rumqttc::QoS::AtLeastOnce,
+                        false,
+                        "OFF",
+                    )
+                    .await
+                {
+                    tracing::error!("Failed to deactivate alarm: {}", e);
+                }
+                if let Err(e) = client
+                    .publish(TOPIC_ALARM_STATUS, rumqttc::QoS::AtLeastOnce, false, "OFF")
+                    .await
+                {
+                    tracing::error!("Failed to deactivate alarm: {}", e);
+                }
+            });
         }
         Ok(())
     }
 
     pub async fn desactivate(&mut self) -> Result<(), Box<dyn Error>> {
+        self.publish(TOPIC_ALARM_EXTERIOR, "OFF").await?;
+        self.publish(TOPIC_ALARM_INTERIOR, "OFF").await?;
         self.disarm().await?;
+        Ok(())
+    }
 
+    pub async fn publish(&self, topic: &str, payload: &str) -> Result<(), Box<dyn Error>> {
         self.client
-            .publish(
-                TOPIC_ALARM_EXTERIOR,
-                rumqttc::QoS::AtLeastOnce,
-                false,
-                "OFF",
-            )
+            .publish(topic, rumqttc::QoS::AtLeastOnce, false, payload)
             .await?;
-
         Ok(())
     }
 }
