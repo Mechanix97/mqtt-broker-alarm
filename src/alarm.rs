@@ -11,6 +11,7 @@ use crate::constants::{
 
 pub struct Alarm<'a> {
     armed: bool,
+    activated: bool,
     client: &'a AsyncClient,
 }
 
@@ -18,6 +19,7 @@ impl<'a> Alarm<'a> {
     pub fn new(client: &'a AsyncClient) -> Self {
         Self {
             armed: false,
+            activated: false,
             client,
         }
     }
@@ -34,7 +36,7 @@ impl<'a> Alarm<'a> {
     }
 
     pub async fn disarm(&mut self) -> Result<(), Box<dyn Error>> {
-        if self.is_armed() {
+        if self.is_armed() && !self.activated {
             self.publish(TOPIC_ALARM_INTERIOR, "ON").await?;
             sleep(Duration::from_millis(100)).await;
             self.publish(TOPIC_ALARM_INTERIOR, "OFF").await?;
@@ -51,44 +53,46 @@ impl<'a> Alarm<'a> {
     pub async fn activate(&mut self) -> Result<(), Box<dyn Error>> {
         if self.is_armed() {
             info!("Alarm activated");
-            self.armed = false;
             self.publish(TOPIC_ALARM_EXTERIOR, "ON").await?;
             // self.publish(TOPIC_ALARM_INTERIOR, "ON").await?;
 
-            // Spawn a task to deactivate the alarm after 1 minute
-            let client = self.client.clone();
-            task::spawn(async move {
-                sleep(Duration::from_secs(ALARM_ACTIVE_DURATION)).await;
-                info!("Alarm automatically deactivated after 1 minute");
-                if let Err(e) = client
-                    .publish(
-                        TOPIC_ALARM_EXTERIOR,
-                        rumqttc::QoS::AtLeastOnce,
-                        false,
-                        "OFF",
-                    )
-                    .await
-                {
-                    tracing::error!("Failed to deactivate alarm: {}", e);
-                }
-                if let Err(e) = client
-                    .publish(
-                        TOPIC_ALARM_INTERIOR,
-                        rumqttc::QoS::AtLeastOnce,
-                        false,
-                        "OFF",
-                    )
-                    .await
-                {
-                    tracing::error!("Failed to deactivate alarm: {}", e);
-                }
-                if let Err(e) = client
-                    .publish(TOPIC_ALARM_STATUS, rumqttc::QoS::AtLeastOnce, false, "OFF")
-                    .await
-                {
-                    tracing::error!("Failed to deactivate alarm: {}", e);
-                }
-            });
+            if !self.activated {
+                // Spawn a task to deactivate the alarm after 1 minute
+                let client = self.client.clone();
+                task::spawn(async move {
+                    sleep(Duration::from_secs(ALARM_ACTIVE_DURATION)).await;
+                    info!("Alarm automatically deactivated after 1 minute");
+                    if let Err(e) = client
+                        .publish(
+                            TOPIC_ALARM_EXTERIOR,
+                            rumqttc::QoS::AtLeastOnce,
+                            false,
+                            "OFF",
+                        )
+                        .await
+                    {
+                        tracing::error!("Failed to deactivate alarm: {}", e);
+                    }
+                    if let Err(e) = client
+                        .publish(
+                            TOPIC_ALARM_INTERIOR,
+                            rumqttc::QoS::AtLeastOnce,
+                            false,
+                            "OFF",
+                        )
+                        .await
+                    {
+                        tracing::error!("Failed to deactivate alarm: {}", e);
+                    }
+                    if let Err(e) = client
+                        .publish(TOPIC_ALARM_STATUS, rumqttc::QoS::AtLeastOnce, false, "OFF")
+                        .await
+                    {
+                        tracing::error!("Failed to deactivate alarm: {}", e);
+                    }
+                });
+            }
+            self.activated = true;
         }
         Ok(())
     }
@@ -97,6 +101,7 @@ impl<'a> Alarm<'a> {
         self.publish(TOPIC_ALARM_EXTERIOR, "OFF").await?;
         self.publish(TOPIC_ALARM_INTERIOR, "OFF").await?;
         self.disarm().await?;
+        self.activated = false;
         Ok(())
     }
 
