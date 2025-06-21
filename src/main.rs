@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .init();
 
     info!("Broker started");
-    send_telegram_message(TELEGRAM_MSG_INTRUDER_ALERT).await?;
+
     let mut mqttoptions = MqttOptions::new("rust-mqtt-reader", MQTT_SERVER_IP, MQTT_SERVER_PORT);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
