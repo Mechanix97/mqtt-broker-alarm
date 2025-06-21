@@ -18,9 +18,12 @@ lazy_static! {
 }
 
 pub async fn send_telegram_message(message: &str) -> Result<(), Box<dyn Error>> {
+    info!("hola");
+    info!("BOT TOKEN {}", *BOT_TOKEN);
+    info!("CHAT_ID {}", *CHAT_ID);
     let client = Client::new();
     let url = format!("https://api.telegram.org/bot{}/sendMessage", *BOT_TOKEN);
-
+    info!("url {url}");
     let payload = json!({
         "chat_id": *CHAT_ID,
         "text": message,

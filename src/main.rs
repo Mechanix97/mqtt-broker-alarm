@@ -17,6 +17,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_max_level(tracing::Level::INFO)
         .init();
 
+    info!("Broker started");
+    send_telegram_message(TELEGRAM_MSG_INTRUDER_ALERT).await?;
     let mut mqttoptions = MqttOptions::new("rust-mqtt-reader", MQTT_SERVER_IP, MQTT_SERVER_PORT);
     mqttoptions.set_keep_alive(Duration::from_secs(5));
 
@@ -43,6 +45,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut alarm = Alarm::new(&client);
 
+    info!("Starting event loop");
     loop {
         while let Ok(event) = eventloop.poll().await {
             match event {
