@@ -6,7 +6,7 @@ build-image:
 	@docker build -t mqtt-broker-alarm .
 
 run-docker: build-image stop-docker
-	@docker run --env-file secrets/telegram.env -d mqtt-broker-alarm --name mqtt-broker-alarm
+	@docker run --env-file secrets/telegram.env --name mqtt-broker-alarm -d mqtt-broker-alarm 
 
 stop-docker:
 	@docker stop mqtt-broker-alarm
