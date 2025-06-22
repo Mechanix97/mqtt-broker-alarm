@@ -1,0 +1,167 @@
+esphome:
+  name: esp32-mqtt-alarm
+
+esp32:
+  board: esp32dev
+
+wifi:
+  ssid: "Clarofibra2024"
+  password: "11335577"
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API (optional)
+api:
+
+# Enable OTA updates
+ota:
+  platform: esphome
+
+mqtt:
+  broker: "192.168.100.2"
+  port: 1883
+
+  on_message:
+    - topic: "alarm/exterior"
+      payload: "ON"
+      then:
+        - logger.log: "Turning ON alarm EXTERIOR (GPIO16)"
+        - output.turn_on: pin16
+    - topic: "alarm/exterior"
+      payload: "OFF"
+      then:
+        - logger.log: "Turning OFF alarm EXTERIOR (GPIO16)"
+        - output.turn_off: pin16
+
+    - topic: "alarm/interior"
+      payload: "ON"
+      then:
+        - logger.log: "Turning ON alarm INTERIOR (GPIO17)"
+        - output.turn_on: pin17
+    - topic: "alarm/interior"
+      payload: "OFF"
+      then:
+        - logger.log: "Turning OFF alarm INTERIOR (GPIO17)"
+        - output.turn_off: pin17
+
+# Definir GPIO16 y GPIO17 como salidas
+output:
+  - platform: gpio
+    pin: 16
+    id: pin16
+  - platform: gpio
+    pin: 17
+    id: pin17
+
+# Definir GPIO33 como entrada para el botón
+binary_sensor:
+  - platform: gpio
+    pin: 33
+    name: "Bell Button"
+    id: bell_button
+    on_press:
+      - logger.log: "Bell button pressed! Sending MQTT message."
+      - mqtt.publish:
+          topic: "bell"
+          payload: "ON"
+
+  - platform: gpio
+    pin:
+      number: 13
+      mode: INPUT
+      inverted: true
+    name: "Front Door Sensor"
+    device_class: door
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_state:
+      then:
+        - logger.log:
+            format: "Front Door changed to %s"
+            args: ['x ? "ON" : "OFF"']
+        - mqtt.publish:
+            topic: "alarm/front_door"
+            payload: !lambda 'return x ? "ON" : "OFF";'
+            retain: true
+
+  - platform: gpio
+    pin:
+      number: 12
+      mode: INPUT
+      inverted: true
+    name: "Back Door Sensor"
+    device_class: door
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_state:
+      then:
+        - logger.log:
+            format: "Back Door changed to %s"
+            args: ['x ? "ON" : "OFF"']
+        - mqtt.publish:
+            topic: "alarm/back_door"
+            payload: !lambda 'return x ? "ON" : "OFF";'
+            retain: true
+
+  - platform: gpio
+    pin:
+      number: 14
+      mode: INPUT
+      inverted: true
+    name: "Movement Sensor 1"
+    device_class: motion
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_state:
+      then:
+        - logger.log:
+            format: "Movement Sensor 1 changed to %s"
+            args: ['x ? "ON" : "OFF"']
+        - mqtt.publish:
+            topic: "alarm/movement_1"
+            payload: !lambda 'return x ? "ON" : "OFF";'
+            retain: true
+
+  - platform: gpio
+    pin:
+      number: 27
+      mode: INPUT
+      inverted: true
+    name: "Movement Sensor 2"
+    device_class: motion
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_state:
+      then:
+        - logger.log:
+            format: "Movement Sensor 2 changed to %s"
+            args: ['x ? "ON" : "OFF"']
+        - mqtt.publish:
+            topic: "alarm/movement_2"
+            payload: !lambda 'return x ? "ON" : "OFF";'
+            retain: true
+
+  - platform: gpio
+    pin:
+      number: 26
+      mode: INPUT
+      inverted: true
+    name: "Movement Sensor 3"
+    device_class: motion
+    filters:
+      - delayed_on: 50ms
+      - delayed_off: 50ms
+    on_state:
+      then:
+        - logger.log:
+            format: "Movement Sensor 3 changed to %s"
+            args: ['x ? "ON" : "OFF"']
+        - mqtt.publish:
+            topic: "alarm/movement_3"
+            payload: !lambda 'return x ? "ON" : "OFF";'
+            retain: true
