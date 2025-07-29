@@ -11,7 +11,7 @@ The system consists of four main components:
 4. **Telegram**: Displays alarm notifications to the user.
 
 Image of the IoT Alarm device:
-![IoT Alarm Device](includes/alarm.jpg)
+![IoT Alarm Device](includes/alarm.png)
 
 The following diagram illustrates the data flow:
 
