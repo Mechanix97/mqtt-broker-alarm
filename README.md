@@ -10,6 +10,9 @@ The system consists of four main components:
 3. **MQTT-Telegram Bridge**: Subscribes to the MQTT topic and sends notifications to Telegram.
 4. **Telegram**: Displays alarm notifications to the user.
 
+Image of the IoT Alarm device:
+![IoT Alarm Device](includes/alarm.jpg
+
 The following diagram illustrates the data flow:
 
 ```mermaid
