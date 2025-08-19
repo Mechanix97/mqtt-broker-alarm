@@ -2,6 +2,8 @@
 
 This project implements an IoT-based alarm system using an ESP32 device programmed with ESPHome. The system monitors an alarm sensor (motion & door sensor & door bell), publishes events to an MQTT broker, and sends notifications to Telegram via a bridge script. This allows for real-time remote alerts when the alarm is triggered.
 
+![Alarm Diagram](includes/fritzing-diagram.png)
+
 ## System Architecture
 
 The system consists of four main components:
