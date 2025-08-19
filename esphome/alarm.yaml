@@ -5,8 +5,8 @@ esp32:
   board: esp32dev
 
 wifi:
-  ssid: "Clarofibra2024"
-  password: "11335577"
+  ssid: "wifi-ssid"
+  password: "wifi-password"
 
 # Enable logging
 logger:
